@@ -22,12 +22,15 @@ services:
       context: ./src/backend
     ports:
       - "8000:8000"
+    volumes:
+      - ./docs:/app/docs:ro
     environment:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-campaignlauncher}:${POSTGRES_PASSWORD:-campaignlauncher}@db:5432/${POSTGRES_DB:-campaignlauncher}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

@@ -41,15 +41,33 @@ Added the full data layer. PostgreSQL 16 in Docker Compose, SQLAlchemy 2.0 async
 
 ---
 
-## Phase 3: Agent Pipeline (Upcoming)
+## Phase 3: Agent Pipeline -- Core (Completed)
 
-- [ ] Landing page fetching via Puppeteer MCP
-- [ ] Page content analysis via Claude API (above-the-fold focus)
-- [ ] Keyword generation (tightly themed ad groups)
-- [ ] RSA ad copy generation (headlines + descriptions)
+- [x] Step 1: Add Python dependencies -- anthropic, beautifulsoup4, httpx (moved from dev to main)
+- [x] Step 2: Configuration -- ANTHROPIC_API_KEY in Settings, Docker Compose, .env.example
+- [x] Step 3: Fix Ad model -- postgresql.JSON to sqlalchemy.JSON for SQLite test compatibility
+- [x] Step 4: Pipeline schemas -- PageContent, CampaignStructure, GenerateResponse with nested types
+- [x] Step 5: Page fetcher service -- httpx + BeautifulSoup, URL validation, SSRF protection, 19 tests
+- [x] Step 6: Claude analyzer service -- Anthropic SDK, system prompt loading, JSON parsing, 16 tests
+- [x] Step 7: Campaign saver service -- atomic DB writes, status transition to review, 6 tests
+- [x] Step 8: Pipeline orchestrator -- chains fetch/analyze/save with per-step timing and logging
+- [x] Step 9: Pipeline router -- POST /api/campaigns/{id}/generate with error mapping, 5 integration tests
+- [x] Step 10: Frontend -- BFF proxy route, TypeScript types, useGenerateCampaign hook, Generate button
+- [x] Step 11: Frontend tests -- Generate button visibility tests, all 7 frontend tests passing
+
+### Session Summary (Phase 3)
+Built the core AI agent pipeline. POST /api/campaigns/{id}/generate triggers a 3-step pipeline: (1) fetch landing page with httpx+BeautifulSoup including SSRF protection, (2) analyze with Claude via Anthropic SDK using the system prompt from docs/SystemPrompt.md, (3) save generated ad groups/keywords/ads to the database and transition campaign to review status. Each step logs start/completion/failure with timing. Frontend gets a Generate button that appears only for draft campaigns. 57 backend tests, 7 frontend tests, all passing. Lint clean. Google Sheets and Ads Script generation deferred to a later phase.
+
+E2E tested with anthropic.com -- Claude generated 4 ad groups (AI Safety Research, Claude AI Assistant, AI Development Platform, AI Learning Resources) with 10 keywords each (phrase + exact), 15 headlines, and 4 descriptions per ad group. Campaign transitioned to review status successfully.
+
+Docker fixes during E2E: system prompt path resolution updated to walk up directory tree instead of hardcoded parents[4] (breaks inside Docker container). Added docs/ volume mount to Docker Compose. Added SYSTEM_PROMPT_PATH config setting. Used --env-file .env.local for Docker Compose variable interpolation.
+
+---
+
+## Phase 3b: Agent Pipeline -- Extensions (Upcoming)
+
 - [ ] Google Sheets integration via MCP
 - [ ] Google Ads Script generation
-- [ ] Agent chain logging and error handling
 
 ## Phase 4: Review and Approval Workflow (Upcoming)
 

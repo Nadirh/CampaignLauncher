@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useCampaigns } from "@/hooks/use-campaigns";
+import { useCampaigns, useGenerateCampaign } from "@/hooks/use-campaigns";
 import CreateCampaignModal from "@/components/create-campaign-modal";
 
 export default function CampaignList() {
   const { data, isLoading, isError } = useCampaigns();
   const [modalOpen, setModalOpen] = useState(false);
+  const generateMutation = useGenerateCampaign();
 
   return (
     <div>
@@ -42,6 +43,7 @@ export default function CampaignList() {
               <th className="pb-2 font-medium">Status</th>
               <th className="pb-2 font-medium">URL</th>
               <th className="pb-2 font-medium">Created</th>
+              <th className="pb-2 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -59,10 +61,29 @@ export default function CampaignList() {
                 <td className="py-3 text-gray-500">
                   {new Date(campaign.created_at).toLocaleDateString()}
                 </td>
+                <td className="py-3">
+                  {campaign.status === "draft" && (
+                    <button
+                      onClick={() => generateMutation.mutate(campaign.id)}
+                      disabled={generateMutation.isPending}
+                      className="rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {generateMutation.isPending
+                        ? "Generating..."
+                        : "Generate"}
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+
+      {generateMutation.isError && (
+        <p className="mt-4 text-red-600">
+          Generation failed. Please try again.
+        </p>
       )}
 
       <CreateCampaignModal

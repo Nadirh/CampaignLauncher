@@ -28,8 +28,10 @@ services:
       - ENVIRONMENT=development
       - SENTRY_DSN=${SENTRY_DSN:-}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-campaignlauncher}:${POSTGRES_PASSWORD:-campaignlauncher}@db:5432/${POSTGRES_DB:-campaignlauncher}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
       - ./src/backend/app:/app/app
+      - ./docs:/app/docs:ro
     command: ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       db:

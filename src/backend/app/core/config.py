@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     SENTRY_DSN: str = ""
     DATABASE_URL: str = "postgresql+asyncpg://campaignlauncher:campaignlauncher@localhost:5432/campaignlauncher"
+    ANTHROPIC_API_KEY: str = ""
+    SYSTEM_PROMPT_PATH: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

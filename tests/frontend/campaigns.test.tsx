@@ -71,6 +71,61 @@ describe("CampaignList", () => {
     expect(screen.getByText("draft")).toBeInTheDocument();
   });
 
+  it("shows Generate button for draft campaigns", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          campaigns: [
+            {
+              id: "abc-123",
+              name: "Draft Campaign",
+              status: "draft",
+              landing_page_url: "https://example.com",
+              bidding_strategy: "manual_cpc",
+              daily_budget: null,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+          total: 1,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    render(<CampaignList />, { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Generate")).toBeInTheDocument();
+    });
+  });
+
+  it("hides Generate button for non-draft campaigns", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          campaigns: [
+            {
+              id: "abc-456",
+              name: "Review Campaign",
+              status: "review",
+              landing_page_url: "https://example.com",
+              bidding_strategy: "manual_cpc",
+              daily_budget: null,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+          total: 1,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    render(<CampaignList />, { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Review Campaign")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Generate")).not.toBeInTheDocument();
+  });
+
   it("opens and closes the create campaign modal", async () => {
     vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ campaigns: [], total: 0 }), {

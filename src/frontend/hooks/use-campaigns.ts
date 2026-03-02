@@ -3,6 +3,7 @@ import type {
   Campaign,
   CampaignCreate,
   CampaignListResponse,
+  GenerateResponse,
 } from "@/types/campaign";
 
 const CAMPAIGNS_KEY = ["campaigns"] as const;
@@ -34,6 +35,24 @@ export function useCreateCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createCampaign,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CAMPAIGNS_KEY });
+    },
+  });
+}
+
+async function generateCampaign(campaignId: string): Promise<GenerateResponse> {
+  const res = await fetch(`/api/campaigns/${campaignId}/generate`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to generate campaign");
+  return res.json();
+}
+
+export function useGenerateCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: generateCampaign,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CAMPAIGNS_KEY });
     },
