@@ -1,4 +1,22 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-campaignlauncher}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-campaignlauncher}
+      - POSTGRES_DB=${POSTGRES_DB:-campaignlauncher}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campaignlauncher"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
   backend:
     build:
       context: ./src/backend
@@ -9,6 +27,10 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - SENTRY_DSN=${SENTRY_DSN:-}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-campaignlauncher}:${POSTGRES_PASSWORD:-campaignlauncher}@db:5432/${POSTGRES_DB:-campaignlauncher}
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -23,6 +45,9 @@ services:
       - backend
     networks:
       - app-network
+
+volumes:
+  pgdata:
 
 networks:
   app-network:

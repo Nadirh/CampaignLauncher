@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { fetchFromApi } from "@/lib/api";
 
 interface HealthResponse {
@@ -32,6 +33,12 @@ export default async function HomePage() {
           {health.status}
         </span>
       </p>
+      <Link
+        href="/campaigns"
+        className="mt-8 rounded-md bg-blue-600 px-6 py-3 text-sm font-medium text-white hover:bg-blue-700"
+      >
+        View Campaigns
+      </Link>
     </main>
   );
 }

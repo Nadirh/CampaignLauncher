@@ -6,8 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.database import init_db
 from app.core.logging import setup_logging
-from app.routers import health
+from app.routers import campaigns, health
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    await init_db()
     logger.info("Application started", extra={"environment": settings.ENVIRONMENT})
     yield
 
@@ -30,3 +32,4 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(campaigns.router)

@@ -17,5 +17,9 @@ export async function fetchFromApi<T>(
     throw new Error(`API error: ${response.status} ${response.statusText}`);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }

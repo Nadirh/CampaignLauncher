@@ -12,10 +12,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
     "next": "^15.3.0",
+    "pino": "^9.6.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "pino": "^9.6.0"
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
