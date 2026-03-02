@@ -10,7 +10,25 @@ logs/
 
 # Node
 node_modules/
+.next/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Docker
+docker-compose.override.yml
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
