@@ -110,6 +110,15 @@ class TestBuildUserMessage:
         msg = _build_user_message(SAMPLE_PAGE, match_types=["phrase", "exact", "broad"])
         assert "Use phrase and exact and broad match" in msg
 
+    def test_single_match_type_schema_example(self) -> None:
+        msg = _build_user_message(SAMPLE_PAGE, match_types=["phrase"])
+        assert '"match_type": "phrase"' in msg
+        assert '"match_type": "exact"' not in msg
+
+    def test_single_match_type_keyword_instruction(self) -> None:
+        msg = _build_user_message(SAMPLE_PAGE, match_types=["phrase"])
+        assert "using phrase match" in msg.lower()
+
     def test_campaign_settings_section(self) -> None:
         msg = _build_user_message(
             SAMPLE_PAGE,

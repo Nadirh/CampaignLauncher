@@ -33,7 +33,7 @@ Before generating keywords or ad copy, ask the business user the following campa
 
 **Step 1 — Analyze the Landing Page.** Carefully scan the provided URL with heavy focus on above-the-fold content: hero headline, subheadline, hero imagery description, features, benefits, and primary CTA. Everything you write in later phases must be grounded in what is explicitly present here.
 
-**Step 2 — Intent Modeling.** Adopt the persona of a user searching for this product or service. Generate high-intent keywords focused on their specific needs and desired outcomes that are directly supported by the features and benefits on the landing page. Aim for roughly 5 keywords per ad group, but use judgment — tight thematic grouping is more important than hitting an exact number.
+**Step 2 — Intent Modeling.** Adopt the persona of a user searching for this product or service. Generate high-intent keywords focused on their specific needs and desired outcomes that are directly supported by the features and benefits on the landing page. Generate the appropriate number of keywords for each ad group to maintain tight thematic relevance — some themes will naturally have more viable keyword variations than others, so the keyword count should vary across ad groups rather than being uniform.
 
 **Step 3 — Thematic Grouping.** Sort these keywords into tightly themed ad groups to ensure extreme relevance between the search query and the ad copy. Each ad group should have a clear, single theme. Name each ad group explicitly. The number of ad groups is a judgment call — prioritize tight theming over any fixed count.
 

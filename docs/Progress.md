@@ -2,7 +2,7 @@
 
 ## Current State
 
-Phase 4b (Campaign Settings + Pin Positions & Behavioral Triggers) complete. The create modal now collects 6 campaign settings -- all required except negative keywords (Google Ads needs them). Settings are threaded to Claude and included in the user message. Claude returns behavioral trigger labels (from the 7-item Behavioral Toolbox in SystemPrompt.md) on every headline and description. Pin positions and triggers are displayed on the detail page. The Excel Ads sheet outputs one row per headline/description with separate columns for Type, #, Copy, Pin Position, Trigger, and Length -- keeping copy text clean for business user review. All changes are backwards compatible. All tests pass (91 backend, 24 frontend), lint is clean.
+Phase 3c (Google Ads Script Generation) complete and E2E verified with go2bank.com. Users can now upload a reviewed/edited Excel workbook to generate a Google Ads Script (JavaScript) that creates the full campaign when pasted into Google Ads. The script is generated deterministically from the parsed Excel data -- no LLM involved. The detail page shows a file upload section (when ad groups exist), generates the script via the backend, and displays it with copy-to-clipboard and step-by-step instructions. Two bugs found in E2E and fixed: (1) match type selection was ignored in Claude's JSON schema example and keyword instruction -- now dynamic, (2) SystemPrompt.md updated to produce variable keyword counts per ad group instead of uniform 5. All tests pass (141 backend, 32 frontend), lint is clean.
 
 ## What Has Been Implemented
 
@@ -17,13 +17,13 @@ Phase 4b (Campaign Settings + Pin Positions & Behavioral Triggers) complete. The
 - **Models**: Campaign (with settings: match_types, negative_keywords, bid_value, location_targeting), AdGroup, Keyword, Ad with SQLAlchemy 2.0 async, UUID PKs, timestamp mixin
 - **Enums**: CampaignStatus (draft/review/approved/launched/paused), BiddingStrategy (default: TARGET_CPA), MatchType
 - **Schemas**: Pydantic v2 for campaign CRUD and pipeline (PageContent, CampaignStructure with trigger fields, GenerateResponse with settings)
-- **Endpoints**: Full CRUD at `/api/campaigns` + `/api/campaigns/{id}/generate` + `/api/campaigns/{id}/approve` + `/api/campaigns/{id}/reject` + `/api/campaigns/{id}/export` + `/api/health`
+- **Endpoints**: Full CRUD at `/api/campaigns` + `/api/campaigns/{id}/generate` + `/api/campaigns/{id}/approve` + `/api/campaigns/{id}/reject` + `/api/campaigns/{id}/export` + `/api/campaigns/{id}/ads-script` + `/api/health`
 - **Database**: Async engine + session via `get_db` dependency, `init_db` connection check at startup
 - **Logging**: Structured JSON via python-json-logger
 
 #### Agent Pipeline Services
 - **PageFetcher** (`app/services/page_fetcher.py`): httpx + BeautifulSoup, extracts title, meta desc, headings, hero text, CTAs, features, raw text. URL validation with SSRF protection (blocks private IPs, loopback, reserved ranges)
-- **ClaudeAnalyzer** (`app/services/claude_analyzer.py`): Loads system prompt from `docs/SystemPrompt.md`, builds structured user message from PageContent with campaign settings (match types, bidding strategy, bid value, daily budget, location targeting, negative keywords), requests behavioral trigger labels on headlines/descriptions, calls Claude via Anthropic SDK, parses JSON response (handles markdown code fences)
+- **ClaudeAnalyzer** (`app/services/claude_analyzer.py`): Loads system prompt from `docs/SystemPrompt.md`, builds structured user message from PageContent with campaign settings (match types, bidding strategy, bid value, daily budget, location targeting, negative keywords), dynamically generates JSON schema example matching selected match types, requests behavioral trigger labels on headlines/descriptions, calls Claude via Anthropic SDK, parses JSON response (handles markdown code fences)
 - **CampaignSaver** (`app/services/campaign_saver.py`): Saves CampaignStructure to DB -- creates AdGroup, Keyword, Ad records atomically, transitions campaign to REVIEW status
 - **PipelineOrchestrator** (`app/services/pipeline.py`): Chains fetch -> analyze -> save with per-step timing and error logging. PipelineError includes step identification
 - **PipelineRouter** (`app/routers/pipeline.py`): POST endpoint, maps PipelineError.step to HTTP status codes (400 for validation, 502 for fetch/analyze, 500 for save)
@@ -32,17 +32,22 @@ Phase 4b (Campaign Settings + Pin Positions & Behavioral Triggers) complete. The
 - **ExcelExport** (`app/services/excel_export.py`): Generates .xlsx workbook in-memory via openpyxl with 3 tabs: Summary (campaign settings), Keywords (denormalized), Ads (one row per headline/description with columns: Ad Group, Ad #, Type, #, Copy, Pin Position, Trigger, Length, Final URL, Path). Takes Pydantic model, not ORM objects. Bold headers with gray fill
 - **ExportRouter** (`app/routers/export.py`): GET endpoint, loads campaign with selectinload, streams binary response with Content-Disposition
 
-- **Tests**: 91 tests using async SQLite (`aiosqlite`) with httpx `AsyncClient`
+#### Google Ads Script Generation
+- **ExcelParser** (`app/services/excel_parser.py`): Parses uploaded .xlsx back to structured data (ParsedWorkbook with campaign, keywords, ads). Summary sheet uses label-based lookup (robust to row reordering). Ads sheet groups rows by (Ad Group, Ad #) into ads, splitting by Type column
+- **AdsScriptGenerator** (`app/services/ads_script_generator.py`): Deterministic JS code generation from ParsedWorkbook. Script includes: header with instructions, duplicate campaign check, campaign creation (PAUSED), ad groups with CPC bids, keywords with match type formatting (broad/phrase/exact), RSAs with pin positions (HEADLINE_1/2/3), negative keywords, location targeting with country code lookup (US/UK/CA/AU/DE/FR)
+- **AdsScriptRouter** (`app/routers/ads_script.py`): POST /api/campaigns/{id}/ads-script accepts UploadFile, validates campaign exists and file type, returns ScriptGenerateResponse
+
+- **Tests**: 141 tests using async SQLite (`aiosqlite`) with httpx `AsyncClient`
 
 ### Frontend (Next.js)
 - **State**: TanStack Query for server state, Zustand available for client state
 - **Provider**: `QueryProvider` wrapping the app in `layout.tsx`
 - **Types**: `types/campaign.ts` with Campaign, GenerateResponse, AdGroupResponse, KeywordResponse, AdResponse
-- **BFF Routes**: `/api/campaigns` (GET/POST), `/api/campaigns/[id]` (GET/PUT/DELETE), `/api/campaigns/[id]/generate` (POST), `/api/campaigns/[id]/approve` (POST), `/api/campaigns/[id]/reject` (POST), `/api/campaigns/[id]/export` (GET, binary passthrough)
-- **Hooks**: `useCampaigns()`, `useCreateCampaign()`, `useGenerateCampaign()`, `useCampaignDetail(id)`, `useApproveCampaign()`, `useRejectCampaign()` with cache invalidation
-- **Components**: `CampaignList` (table with clickable name links, Generate button for draft campaigns), `CreateCampaignModal` (6 campaign settings fields with defaults), `ConfirmModal` (reusable)
-- **Pages**: `/campaigns` list page, `/campaigns/[id]` detail page (collapsible ad groups, keywords with match type badges, ads with pin position badges and trigger labels, campaign settings display, approve/reject, Download Excel), home page with link to campaigns
-- **Tests**: 24 tests (7 campaign list, 11 campaign detail, 5 confirm modal, 1 home page)
+- **BFF Routes**: `/api/campaigns` (GET/POST), `/api/campaigns/[id]` (GET/PUT/DELETE), `/api/campaigns/[id]/generate` (POST), `/api/campaigns/[id]/approve` (POST), `/api/campaigns/[id]/reject` (POST), `/api/campaigns/[id]/export` (GET, binary passthrough), `/api/campaigns/[id]/ads-script` (POST, FormData proxy)
+- **Hooks**: `useCampaigns()`, `useCreateCampaign()`, `useGenerateCampaign()`, `useCampaignDetail(id)`, `useApproveCampaign()`, `useRejectCampaign()`, `useGenerateAdsScript()` with cache invalidation
+- **Components**: `CampaignList` (table with clickable name links, Generate button for draft campaigns), `CreateCampaignModal` (6 campaign settings fields with defaults), `ConfirmModal` (reusable), `AdsScriptDisplay` (script display with copy-to-clipboard and instructions)
+- **Pages**: `/campaigns` list page, `/campaigns/[id]` detail page (collapsible ad groups, keywords with match type badges, ads with pin position badges and trigger labels, campaign settings display, approve/reject, Download Excel, Generate Ads Script with file upload), home page with link to campaigns
+- **Tests**: 32 tests (7 campaign list, 14 campaign detail, 5 confirm modal, 5 ads-script-display, 1 home page)
 - **API Utility**: `fetchFromApi` handles JSON and 204 responses
 
 ### Key Decisions
@@ -57,11 +62,11 @@ Phase 4b (Campaign Settings + Pin Positions & Behavioral Triggers) complete. The
 - System prompt loaded from `docs/SystemPrompt.md` at runtime (path resolved by walking up directory tree, with SYSTEM_PROMPT_PATH config override)
 - Docker Compose uses `--env-file .env.local` for secrets, `docs/` mounted as read-only volume into backend container
 - E2E verified: anthropic.com generated 4 ad groups with proper keyword/headline/description structure
+- E2E verified: go2bank.com generated 5 ad groups, Google Ads Script with campaigns/keywords/RSAs/pins/locations all correct
 - Excel export replaces Google Sheets MCP -- openpyxl generates workbooks in-memory, no external API dependencies
+- Google Ads Script generated from uploaded Excel (not DB) so users can edit before launching
 
 ## What Remains
-
-### Phase 3c: Google Ads Script Generation
 
 ### Phase 5: Production Readiness (Auth, RLS, Rate Limiting, Sentry)
 
@@ -148,4 +153,28 @@ tests/
   backend/test_claude_analyzer.py       -- 6 new tests for triggers/settings/match types
   backend/test_excel_export.py          -- updated fixtures + 2 new backwards-compat tests
   frontend/campaign-detail.test.tsx     -- 3 new tests (pin/trigger display, settings display)
+```
+
+## Phase 3c additions (Google Ads Script Generation)
+
+```
+src/backend/
+  app/schemas/ads_script.py              -- ParsedKeyword, ParsedAd, ParsedCampaign, ParsedWorkbook, ScriptGenerateResponse
+  app/services/excel_parser.py           -- parse uploaded xlsx back to structured data
+  app/services/ads_script_generator.py   -- deterministic JS code generation from parsed data
+  app/routers/ads_script.py              -- POST /api/campaigns/{id}/ads-script endpoint
+
+src/frontend/
+  app/api/campaigns/[id]/ads-script/route.ts  -- BFF FormData proxy POST
+  components/ads-script-display.tsx            -- script display with instructions and copy button
+  types/campaign.ts                            -- added ScriptResponse interface
+  hooks/use-campaigns.ts                       -- added useGenerateAdsScript mutation
+  app/campaigns/[id]/page.tsx                  -- added file upload section and script display
+
+tests/
+  backend/test_excel_parser.py           -- 17 round-trip tests
+  backend/test_ads_script_generator.py   -- 26 tests
+  backend/test_ads_script_endpoint.py    -- 5 integration tests
+  frontend/ads-script-display.test.tsx   -- 5 component tests
+  frontend/campaign-detail.test.tsx      -- 3 new tests (generate script section)
 ```

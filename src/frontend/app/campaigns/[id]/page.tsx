@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   useCampaignDetail,
   useApproveCampaign,
   useRejectCampaign,
+  useGenerateAdsScript,
 } from "@/hooks/use-campaigns";
 import ConfirmModal from "@/components/confirm-modal";
-import type { AdGroupResponse } from "@/types/campaign";
+import AdsScriptDisplay from "@/components/ads-script-display";
+import type { AdGroupResponse, ScriptResponse } from "@/types/campaign";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
@@ -144,11 +146,16 @@ export default function CampaignDetailPage() {
   const { data: campaign, isLoading, isError } = useCampaignDetail(id);
   const approveMutation = useApproveCampaign();
   const rejectMutation = useRejectCampaign();
+  const scriptMutation = useGenerateAdsScript();
 
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
+  const [scriptResult, setScriptResult] = useState<ScriptResponse | null>(null);
+  const [scriptError, setScriptError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   async function handleExport() {
     setExporting(true);
@@ -170,6 +177,22 @@ export default function CampaignDetailPage() {
     } finally {
       setExporting(false);
     }
+  }
+
+  function handleGenerateScript() {
+    if (!selectedFile) return;
+    setScriptError(null);
+    scriptMutation.mutate(
+      { campaignId: id, file: selectedFile },
+      {
+        onSuccess: (data) => {
+          setScriptResult(data);
+        },
+        onError: (error) => {
+          setScriptError(error.message);
+        },
+      },
+    );
   }
 
   function handleApprove() {
@@ -303,6 +326,55 @@ export default function CampaignDetailPage() {
           {campaign.ad_groups.map((ag) => (
             <AdGroupSection key={ag.id} adGroup={ag} />
           ))}
+        </div>
+      )}
+
+      {/* Generate Google Ads Script */}
+      {campaign.ad_groups.length > 0 && (
+        <div className="space-y-3 rounded-lg border border-gray-200 p-4">
+          <h2 className="text-lg font-semibold">Generate Google Ads Script</h2>
+          {scriptResult ? (
+            <AdsScriptDisplay
+              script={scriptResult.script}
+              campaignName={scriptResult.campaign_name}
+              adGroupCount={scriptResult.ad_group_count}
+              keywordCount={scriptResult.keyword_count}
+              adCount={scriptResult.ad_count}
+              onClose={() => {
+                setScriptResult(null);
+                setSelectedFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            />
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                Upload a reviewed Excel workbook to generate a Google Ads
+                Script.
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  className="text-sm text-gray-500 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-50"
+                />
+                <button
+                  onClick={handleGenerateScript}
+                  disabled={!selectedFile || scriptMutation.isPending}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {scriptMutation.isPending
+                    ? "Generating..."
+                    : "Generate Script"}
+                </button>
+              </div>
+              {scriptError && (
+                <p className="text-sm text-red-600">{scriptError}</p>
+              )}
+            </>
+          )}
         </div>
       )}
 

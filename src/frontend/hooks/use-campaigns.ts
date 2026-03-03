@@ -4,6 +4,7 @@ import type {
   CampaignCreate,
   CampaignListResponse,
   GenerateResponse,
+  ScriptResponse,
 } from "@/types/campaign";
 
 const CAMPAIGNS_KEY = ["campaigns"] as const;
@@ -112,5 +113,31 @@ export function useRejectCampaign() {
         queryKey: campaignDetailKey(campaignId),
       });
     },
+  });
+}
+
+async function generateAdsScript({
+  campaignId,
+  file,
+}: {
+  campaignId: string;
+  file: File;
+}): Promise<ScriptResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`/api/campaigns/${campaignId}/ads-script`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error || "Failed to generate ads script");
+  }
+  return res.json();
+}
+
+export function useGenerateAdsScript() {
+  return useMutation({
+    mutationFn: generateAdsScript,
   });
 }

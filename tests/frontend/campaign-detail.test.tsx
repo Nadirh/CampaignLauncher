@@ -228,4 +228,47 @@ describe("CampaignDetailPage", () => {
     expect(screen.getByText("Location: US")).toBeInTheDocument();
     expect(screen.getByText("Negatives: free")).toBeInTheDocument();
   });
+
+  it("shows generate script section when ad groups exist", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(mockCampaign), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<CampaignDetailPage />, { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Generate Google Ads Script")).toBeInTheDocument();
+    });
+  });
+
+  it("generate button is disabled without file selected", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(mockCampaign), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<CampaignDetailPage />, { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Generate Script")).toBeInTheDocument();
+    });
+    const button = screen.getByText("Generate Script");
+    expect(button).toBeDisabled();
+  });
+
+  it("hides generate script section when no ad groups", async () => {
+    const emptyCampaign = { ...mockCampaign, status: "draft", ad_groups: [] };
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(emptyCampaign), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<CampaignDetailPage />, { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Test Campaign")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Generate Google Ads Script")).not.toBeInTheDocument();
+  });
 });

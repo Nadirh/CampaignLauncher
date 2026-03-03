@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.logging import setup_logging
-from app.routers import campaigns, export, health, pipeline
+from app.routers import ads_script, campaigns, export, health, pipeline
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -35,3 +35,4 @@ app.include_router(health.router)
 app.include_router(campaigns.router)
 app.include_router(pipeline.router)
 app.include_router(export.router)
+app.include_router(ads_script.router)

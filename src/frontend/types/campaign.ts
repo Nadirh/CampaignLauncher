@@ -75,6 +75,14 @@ export interface AdGroupResponse {
   ads: AdResponse[];
 }
 
+export interface ScriptResponse {
+  script: string;
+  campaign_name: string;
+  ad_group_count: number;
+  keyword_count: number;
+  ad_count: number;
+}
+
 export interface GenerateResponse {
   id: string;
   name: string;

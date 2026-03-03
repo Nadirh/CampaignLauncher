@@ -89,29 +89,38 @@ def _build_user_message(
     parts.append("")
     parts.append("Based on this landing page content, generate a campaign structure.")
     parts.append(f"Use {match_label} match for each keyword.")
+    # Build match type examples for JSON schema
+    if match_types and len(match_types) > 0:
+        mt_examples = [f'{{"text": "keyword phrase", "match_type": "{mt}"}}' for mt in match_types]
+    else:
+        mt_examples = [
+            '{"text": "keyword phrase", "match_type": "phrase"}',
+            '{"text": "keyword phrase", "match_type": "exact"}',
+        ]
+    mt_json = ",\n        ".join(mt_examples)
+
     parts.append("Return your response as a JSON object with this exact schema:")
-    parts.append("""
-{
+    parts.append(f"""
+{{
   "ad_groups": [
-    {
+    {{
       "name": "Ad Group Name",
       "keywords": [
-        {"text": "keyword phrase", "match_type": "phrase"},
-        {"text": "keyword phrase", "match_type": "exact"}
+        {mt_json}
       ],
       "headlines": [
-        {"text": "Headline text (30 chars max)", "position": 1, "trigger": "simplicity and efficiency"},
-        {"text": "Another headline", "position": 2, "trigger": "social proof"}
+        {{"text": "Headline text (30 chars max)", "position": 1, "trigger": "simplicity and efficiency"}},
+        {{"text": "Another headline", "position": 2, "trigger": "social proof"}}
       ],
       "descriptions": [
-        {"text": "Description text (90 chars max)", "trigger": "reason why and loss aversion"}
+        {{"text": "Description text (90 chars max)", "trigger": "reason why and loss aversion"}}
       ]
-    }
+    }}
   ]
-}
+}}
 """)
     parts.append("Generate 3-5 tightly themed ad groups. Each ad group should have:")
-    parts.append("- 5-10 keywords (each in both phrase and exact match)")
+    parts.append(f"- Keywords using {match_label} match (each keyword repeated in each match type)")
     parts.append("- 15 headlines (30 characters max each)")
     parts.append("- 4 descriptions (90 characters max each)")
     parts.append("Each headline and description must include a behavioral trigger label from the Behavioral Toolbox:")

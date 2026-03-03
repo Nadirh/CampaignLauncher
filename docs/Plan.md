@@ -77,9 +77,27 @@ Docker fixes during E2E: system prompt path resolution updated to walk up direct
 ### Session Summary (Phase 3b)
 Added Excel export as a universal baseline for campaign review. openpyxl generates .xlsx workbooks in-memory (no temp files) with three tabs: Summary (key-value campaign metadata), Keywords (denormalized with ad group name for filtering), and Ads (headlines and descriptions as numbered multi-line strings). The service takes a Pydantic model (CampaignGenerateResponse) for testability without DB. FastAPI endpoint streams the binary response with proper content type and Content-Disposition. Frontend BFF proxy passes the binary through (raw fetch, not fetchFromApi which adds JSON headers). Download Excel button appears on the detail page whenever ad groups exist, with loading state and error handling. Replaces the original Google Sheets MCP approach -- Google Sheets can be added as an optional upload target later.
 
-## Phase 3c: Agent Pipeline -- Extensions (Upcoming)
+## Phase 3c: Google Ads Script Generation (Completed)
 
-- [ ] Google Ads Script generation
+- [x] Step 1: Pydantic schemas for parsed Excel data and script response
+- [x] Step 2: Excel parser service -- parse uploaded xlsx back to structured data, 17 round-trip tests
+- [x] Step 3: Google Ads Script generator -- deterministic JS code generation from parsed data, 26 tests
+- [x] Step 4: Backend endpoint POST /api/campaigns/{id}/ads-script with file upload, python-multipart dep, 5 integration tests
+- [x] Step 5: Frontend types (ScriptResponse), hook (useGenerateAdsScript), BFF proxy route
+- [x] Step 6: AdsScriptDisplay component with instructions, code block, copy button, 5 tests
+- [x] Step 7: Integration into campaign detail page -- file upload section, script display, 3 new tests
+- [x] Step 8: All tests pass (139 backend, 32 frontend), lint clean
+
+### Session Summary (Phase 3c)
+Added Google Ads Script generation from uploaded Excel workbooks. The key design decision: scripts are generated from the (potentially modified) Excel file rather than from the database, so business users can review and edit the Excel before generating the launch script. The Excel parser reads Summary/Keywords/Ads sheets with robust label-based lookup. The script generator produces deterministic JavaScript with: duplicate campaign check, campaign creation in PAUSED status, ad groups with CPC bids, keywords with match type formatting (broad/phrase/exact), RSAs with pin positions (HEADLINE_1/2/3), negative keywords, and location targeting with country code mapping (US/UK/CA/AU/DE/FR). The frontend adds a file upload section to the campaign detail page that appears when ad groups exist, with step-by-step instructions for pasting the script into Google Ads.
+
+E2E tested with go2bank.com -- generated 5 ad groups with 10 keywords each, 15 headlines + 4 descriptions per RSA, pin positions correctly mapped, location targeting (US) and budget ($1000/day Target CPA) all present in the script.
+
+Two bugs found and fixed during E2E:
+1. **Match type leak**: User selected only "Phrase" but script contained both phrase and exact. Root cause: the JSON schema example and keyword instruction in `claude_analyzer.py` hardcoded "both phrase and exact" regardless of user selection. Fixed by making the schema example and instruction dynamic based on the `match_types` parameter. Added 2 new tests.
+2. **Uniform keyword counts**: Every ad group had exactly 10 keywords (5 themes x 2 match types). Root cause: SystemPrompt.md said "aim for roughly 5 keywords per ad group." Updated to instruct Claude to vary keyword counts based on thematic relevance.
+
+Final test counts: 141 backend, 32 frontend. Lint clean.
 
 ## Phase 4: Review and Approval Workflow (Completed)
 
