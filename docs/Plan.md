@@ -64,16 +64,52 @@ Docker fixes during E2E: system prompt path resolution updated to walk up direct
 
 ---
 
-## Phase 3b: Agent Pipeline -- Extensions (Upcoming)
+## Phase 3b: Excel Export for Campaign Review (Completed)
 
-- [ ] Google Sheets integration via MCP
+- [x] Step 1: Add openpyxl dependency to pyproject.toml
+- [x] Step 2: Create Excel export service (generate_workbook with Summary, Keywords, Ads sheets)
+- [x] Step 3: Unit tests for Excel service -- 14 tests covering all sheets, helpers, edge cases
+- [x] Step 4: FastAPI export endpoint (GET /api/campaigns/{id}/export), registered in main.py, 4 integration tests
+- [x] Step 5: Frontend BFF proxy route for binary passthrough, Download Excel button on detail page, 2 new frontend tests
+- [x] Step 6: Updated CLAUDE.md to reflect Excel export approach (replaces Google Sheets MCP)
+- [x] Step 7: All tests pass (82 backend, 21 frontend), lint clean
+
+### Session Summary (Phase 3b)
+Added Excel export as a universal baseline for campaign review. openpyxl generates .xlsx workbooks in-memory (no temp files) with three tabs: Summary (key-value campaign metadata), Keywords (denormalized with ad group name for filtering), and Ads (headlines and descriptions as numbered multi-line strings). The service takes a Pydantic model (CampaignGenerateResponse) for testability without DB. FastAPI endpoint streams the binary response with proper content type and Content-Disposition. Frontend BFF proxy passes the binary through (raw fetch, not fetchFromApi which adds JSON headers). Download Excel button appears on the detail page whenever ad groups exist, with loading state and error handling. Replaces the original Google Sheets MCP approach -- Google Sheets can be added as an optional upload target later.
+
+## Phase 3c: Agent Pipeline -- Extensions (Upcoming)
+
 - [ ] Google Ads Script generation
 
-## Phase 4: Review and Approval Workflow (Upcoming)
+## Phase 4: Review and Approval Workflow (Completed)
 
-- [ ] Spreadsheet review UI
-- [ ] Approval/rejection flow
-- [ ] Campaign status transitions
+- [x] Step 1: Backend -- Enhance GET detail with selectinload for nested ad groups, add POST approve/reject endpoints with status validation (409 for wrong status)
+- [x] Step 2: Backend tests -- 7 new tests for detail with nested data, approve/reject success/wrong status/not found (64 total)
+- [x] Step 3: Frontend BFF proxy routes for approve and reject, updated GET return type to GenerateResponse
+- [x] Step 4: TanStack Query hooks -- useCampaignDetail, useApproveCampaign, useRejectCampaign with cache invalidation
+- [x] Step 5: Reusable ConfirmModal component following existing modal pattern
+- [x] Step 6: Campaign detail page -- header with status badge, approve/reject buttons (review only), collapsible ad groups, keywords table, ad preview
+- [x] Step 7: Campaign names as clickable links in campaign list table
+- [x] Step 8: Frontend tests -- 12 new tests (6 campaign-detail, 5 confirm-modal, 1 link), lint clean
+
+### Session Summary (Phase 4)
+Added the review and approval workflow. Backend GET /api/campaigns/{id} now returns nested ad groups with keywords and ads via selectinload. Added POST approve (review -> approved) and reject (review -> draft) endpoints with 409 on invalid status. Frontend gets a campaign detail page at /campaigns/[id] with collapsible ad groups showing keywords and ad copy, approve/reject buttons with confirmation modals, and status-colored badges. Campaign names in the list table are now clickable links to the detail page. 64 backend tests, 19 frontend tests, all passing. Lint clean.
+
+## Phase 4b: Campaign Settings + Pin Positions & Behavioral Triggers (Completed)
+
+- [x] Step 1: Backend model -- 4 new nullable columns (match_types, negative_keywords, bid_value, location_targeting), bidding_strategy default changed to TARGET_CPA, Alembic migration
+- [x] Step 2: Backend schemas -- Settings fields added to CampaignCreate/Update/Response and CampaignGenerateResponse, trigger field on HeadlineData/DescriptionData, campaign_saver persists triggers
+- [x] Step 3: Claude analyzer -- analyze_page and _build_user_message accept campaign settings kwargs, dynamic match type instruction, Campaign Settings section in user message, trigger field in JSON schema example
+- [x] Step 4: Backend tests -- Updated default bidding_strategy assertion, added test_create_campaign_with_settings and test_update_campaign_settings, 6 new claude_analyzer tests for triggers/settings/match types
+- [x] Step 5: Excel export -- Summary sheet includes Match Types, Negative Keywords, Bid Value, Location Targeting rows; Ads sheet restructured to one row per headline/description with separate columns for Type, #, Copy, Pin Position, Trigger, Length
+- [x] Step 6: Frontend types and create modal -- Campaign/CampaignCreate/GenerateResponse/AdResponse types updated; modal widened with scroll, 6 settings fields with defaults (match types checkboxes, bidding strategy dropdown, bid value, daily budget, negative keywords, location targeting)
+- [x] Step 7: Frontend detail page -- Pin position badges and trigger text on headlines, trigger text on descriptions, campaign settings row in header area
+- [x] Step 8: All tests pass (91 backend, 24 frontend), lint clean
+
+### Session Summary (Phase 4b)
+Added campaign settings and behavioral triggers throughout the stack. The create modal now collects 6 campaign settings (match types as checkboxes defaulting to phrase+exact, bidding strategy dropdown defaulting to target_cpa, bid value, daily budget, negative keywords as comma-separated, location targeting). All settings except negative keywords are required (Google Ads needs them). These settings are threaded through to the Claude analyzer which includes them in the user message and requests behavioral trigger labels (from the 7-item Behavioral Toolbox in SystemPrompt.md) on every headline and description. The campaign saver persists trigger values alongside text and position data. The Excel Ads sheet outputs one row per headline/description with separate columns: Ad Group, Ad #, Type, #, Copy, Pin Position, Trigger, Length, Final URL, Path -- keeping the Copy column clean for business user review. The detail page displays pin position badges, trigger labels, and campaign settings. All changes are backwards compatible -- missing triggers or positions are handled gracefully.
+
+---
 
 ## Phase 5: Production Readiness (Upcoming)
 

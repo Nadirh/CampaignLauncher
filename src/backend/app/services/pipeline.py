@@ -46,7 +46,15 @@ async def run_pipeline(campaign: Campaign, db: AsyncSession) -> Campaign:
     # Step 2: Analyze with Claude
     step_start = time.monotonic()
     try:
-        structure = await analyze_page(page_content)
+        structure = await analyze_page(
+            page_content,
+            match_types=getattr(campaign, "match_types", None),
+            negative_keywords=getattr(campaign, "negative_keywords", None),
+            bidding_strategy=campaign.bidding_strategy.value if campaign.bidding_strategy else None,
+            bid_value=float(campaign.bid_value) if getattr(campaign, "bid_value", None) else None,
+            daily_budget=float(campaign.daily_budget) if campaign.daily_budget else None,
+            location_targeting=getattr(campaign, "location_targeting", None),
+        )
     except Exception as exc:
         logger.error(
             "Pipeline failed at analyze step",

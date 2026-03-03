@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchFromApi } from "@/lib/api";
-import type { Campaign } from "@/types/campaign";
+import type { Campaign, GenerateResponse } from "@/types/campaign";
 
 export async function GET(
   _request: NextRequest,
@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const data = await fetchFromApi<Campaign>(`/api/campaigns/${id}`);
+    const data = await fetchFromApi<GenerateResponse>(`/api/campaigns/${id}`);
     return NextResponse.json(data);
   } catch {
     return NextResponse.json(

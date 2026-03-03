@@ -1,12 +1,12 @@
 # Project Overview
 
-This application is an AI-powered paid search campaign builder. Given a landing page URL, the agent analyzes the page content with particular focus on above-the-fold content, generates tightly themed ad groups with keywords and RSA ad copies, writes the campaign structure to a Google Sheet for business user review and approval, and generates a Google Ads Script that the user runs directly inside their Google Ads account to launch the campaign. Bing Ads is a secondary launch target.
+This application is an AI-powered paid search campaign builder. Given a landing page URL, the agent analyzes the page content with particular focus on above-the-fold content, generates tightly themed ad groups with keywords and RSA ad copies, exports the campaign structure as an Excel workbook for business user review, and generates a Google Ads Script that the user runs directly inside their Google Ads account to launch the campaign. Bing Ads is a secondary launch target.
 
 ## Key Components
 
 - **AI Engine**: Claude via the Anthropic API
 - **Landing Page Fetching**: Puppeteer MCP handles page fetching and rendering
-- **Spreadsheet Operations**: Google Sheets MCP handles all read and write operations
+- **Campaign Export**: Excel workbook generation via openpyxl (Summary, Keywords, Ads tabs) -- universal baseline format. Google Sheets upload can be added as an optional enhancement later
 - **Campaign Launch**: Generate Google Ads Scripts that the user copies and pastes directly into Google Ads to launch the full campaign
 
 ## Standard Workflow
@@ -87,8 +87,8 @@ This application is an AI-powered paid search campaign builder. Given a landing 
 ### MCP Configuration
 
 - **Puppeteer MCP** — handles all landing page fetching and rendering, including JavaScript-heavy pages. Required for above-the-fold content analysis. Used both at runtime and during development.
-- **Google Sheets MCP** — handles all spreadsheet read and write operations for campaign review and approval workflow. Used both at runtime and during development.
-- Both MCPs must be configured and verified before any agent pipeline work begins
+- Puppeteer MCP must be configured and verified before any agent pipeline work begins
+- Google Sheets MCP is not currently used -- campaign export uses server-side Excel generation via openpyxl. Google Sheets integration can be added as an optional upload target later.
 
 ## Testing and Debugging
 
@@ -128,12 +128,12 @@ This application is an AI-powered paid search campaign builder. Given a landing 
 ### API Call Logging
 
 - Every external API call must log: request details, response status, and latency
-- Applies to all external services: Anthropic, Google Ads, Bing Ads, Google Sheets
+- Applies to all external services: Anthropic, Google Ads, Bing Ads
 - Critical for debugging agent chain failures and tracking API costs over time
 
 ### Agent Chain Logging
 
-- The agent pipeline makes multiple chained calls — landing page fetch, page analysis, keyword generation, ad copy generation, Google Sheets write, Ads Script generation
+- The agent pipeline makes multiple chained calls — landing page fetch, page analysis, keyword generation, ad copy generation, Excel export, Ads Script generation
 - Each step in the chain must log its start, completion, and any failure with enough context to identify exactly where in the chain a failure occurred
 - Log the full chain execution time end to end
 

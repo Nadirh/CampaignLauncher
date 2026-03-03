@@ -9,8 +9,12 @@ from app.models.campaign import BiddingStrategy, CampaignStatus
 class CampaignCreate(BaseModel):
     name: str
     landing_page_url: HttpUrl
-    bidding_strategy: BiddingStrategy = BiddingStrategy.MANUAL_CPC
-    daily_budget: float | None = None
+    bidding_strategy: BiddingStrategy
+    daily_budget: float
+    match_types: list[str]
+    negative_keywords: list[str] | None = None
+    bid_value: float
+    location_targeting: str
 
 
 class CampaignUpdate(BaseModel):
@@ -19,6 +23,10 @@ class CampaignUpdate(BaseModel):
     status: CampaignStatus | None = None
     bidding_strategy: BiddingStrategy | None = None
     daily_budget: float | None = None
+    match_types: list[str] | None = None
+    negative_keywords: list[str] | None = None
+    bid_value: float | None = None
+    location_targeting: str | None = None
 
 
 class CampaignResponse(BaseModel):
@@ -30,6 +38,10 @@ class CampaignResponse(BaseModel):
     status: CampaignStatus
     bidding_strategy: BiddingStrategy
     daily_budget: float | None
+    match_types: list[str] | None = None
+    negative_keywords: list[str] | None = None
+    bid_value: float | None = None
+    location_targeting: str | None = None
     created_at: datetime
     updated_at: datetime
 

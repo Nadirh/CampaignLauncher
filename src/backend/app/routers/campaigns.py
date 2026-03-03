@@ -3,15 +3,18 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models.campaign import Campaign
+from app.models.ad_group import AdGroup
+from app.models.campaign import Campaign, CampaignStatus
 from app.schemas.campaign import (
     CampaignCreate,
     CampaignListResponse,
     CampaignResponse,
     CampaignUpdate,
 )
+from app.schemas.pipeline import CampaignGenerateResponse
 
 router = APIRouter(prefix="/api/campaigns", tags=["campaigns"])
 
@@ -36,6 +39,10 @@ async def create_campaign(
         landing_page_url=str(body.landing_page_url),
         bidding_strategy=body.bidding_strategy,
         daily_budget=body.daily_budget,
+        match_types=body.match_types,
+        negative_keywords=body.negative_keywords,
+        bid_value=body.bid_value,
+        location_targeting=body.location_targeting,
     )
     db.add(campaign)
     await db.commit()
@@ -43,15 +50,25 @@ async def create_campaign(
     return CampaignResponse.model_validate(campaign)
 
 
-@router.get("/{campaign_id}", response_model=CampaignResponse)
+@router.get("/{campaign_id}", response_model=CampaignGenerateResponse)
 async def get_campaign(
     campaign_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-) -> CampaignResponse:
-    campaign = await db.get(Campaign, campaign_id)
+) -> CampaignGenerateResponse:
+    result = await db.execute(
+        select(Campaign)
+        .where(Campaign.id == campaign_id)
+        .options(
+            selectinload(Campaign.ad_groups)
+            .selectinload(AdGroup.keywords),
+            selectinload(Campaign.ad_groups)
+            .selectinload(AdGroup.ads),
+        )
+    )
+    campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
-    return CampaignResponse.model_validate(campaign)
+    return CampaignGenerateResponse.model_validate(campaign)
 
 
 @router.put("/{campaign_id}", response_model=CampaignResponse)
@@ -85,3 +102,41 @@ async def delete_campaign(
         raise HTTPException(status_code=404, detail="Campaign not found")
     await db.delete(campaign)
     await db.commit()
+
+
+@router.post("/{campaign_id}/approve", response_model=CampaignResponse)
+async def approve_campaign(
+    campaign_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> CampaignResponse:
+    campaign = await db.get(Campaign, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if campaign.status != CampaignStatus.REVIEW:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Campaign must be in review status to approve (current: {campaign.status.value})",
+        )
+    campaign.status = CampaignStatus.APPROVED
+    await db.commit()
+    await db.refresh(campaign)
+    return CampaignResponse.model_validate(campaign)
+
+
+@router.post("/{campaign_id}/reject", response_model=CampaignResponse)
+async def reject_campaign(
+    campaign_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> CampaignResponse:
+    campaign = await db.get(Campaign, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if campaign.status != CampaignStatus.REVIEW:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Campaign must be in review status to reject (current: {campaign.status.value})",
+        )
+    campaign.status = CampaignStatus.DRAFT
+    await db.commit()
+    await db.refresh(campaign)
+    return CampaignResponse.model_validate(campaign)

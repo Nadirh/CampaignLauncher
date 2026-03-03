@@ -15,6 +15,14 @@ from app.schemas.pipeline import (
 from app.services.page_fetcher import PageFetchError
 from app.services.claude_analyzer import ClaudeAnalyzerError
 
+REQUIRED_SETTINGS = {
+    "bidding_strategy": "target_cpa",
+    "daily_budget": 50.0,
+    "match_types": ["phrase", "exact"],
+    "bid_value": 2.50,
+    "location_targeting": "US",
+}
+
 
 MOCK_PAGE_CONTENT = PageContent(
     url="https://example.com",
@@ -62,7 +70,7 @@ def _patch_pipeline():
 async def test_generate_success(client: AsyncClient) -> None:
     create_resp = await client.post(
         "/api/campaigns",
-        json={"name": "Pipeline Test", "landing_page_url": "https://example.com"},
+        json={"name": "Pipeline Test", "landing_page_url": "https://example.com", **REQUIRED_SETTINGS},
     )
     campaign_id = create_resp.json()["id"]
 
@@ -88,7 +96,7 @@ async def test_generate_not_found(client: AsyncClient) -> None:
 async def test_generate_not_draft(client: AsyncClient) -> None:
     create_resp = await client.post(
         "/api/campaigns",
-        json={"name": "Not Draft", "landing_page_url": "https://example.com"},
+        json={"name": "Not Draft", "landing_page_url": "https://example.com", **REQUIRED_SETTINGS},
     )
     campaign_id = create_resp.json()["id"]
 
@@ -109,7 +117,7 @@ async def test_generate_not_draft(client: AsyncClient) -> None:
 async def test_generate_fetch_failure(client: AsyncClient) -> None:
     create_resp = await client.post(
         "/api/campaigns",
-        json={"name": "Fetch Fail", "landing_page_url": "https://example.com"},
+        json={"name": "Fetch Fail", "landing_page_url": "https://example.com", **REQUIRED_SETTINGS},
     )
     campaign_id = create_resp.json()["id"]
 
@@ -129,7 +137,7 @@ async def test_generate_fetch_failure(client: AsyncClient) -> None:
 async def test_generate_claude_failure(client: AsyncClient) -> None:
     create_resp = await client.post(
         "/api/campaigns",
-        json={"name": "Claude Fail", "landing_page_url": "https://example.com"},
+        json={"name": "Claude Fail", "landing_page_url": "https://example.com", **REQUIRED_SETTINGS},
     )
     campaign_id = create_resp.json()["id"]
 

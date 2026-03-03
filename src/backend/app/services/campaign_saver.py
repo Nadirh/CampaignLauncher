@@ -44,8 +44,14 @@ async def save_campaign_structure(
             )
             db.add(keyword)
 
-        headlines = [{"text": h.text, "position": h.position} for h in ag_data.headlines]
-        descriptions = [{"text": d.text} for d in ag_data.descriptions]
+        headlines = [
+            {"text": h.text, "position": h.position, "trigger": h.trigger}
+            for h in ag_data.headlines
+        ]
+        descriptions = [
+            {"text": d.text, "trigger": d.trigger}
+            for d in ag_data.descriptions
+        ]
 
         ad = Ad(
             final_url=campaign.landing_page_url,

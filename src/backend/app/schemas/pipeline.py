@@ -32,10 +32,12 @@ class KeywordData(BaseModel):
 class HeadlineData(BaseModel):
     text: str
     position: int | None = None
+    trigger: str | None = None
 
 
 class DescriptionData(BaseModel):
     text: str
+    trigger: str | None = None
 
 
 class AdGroupData(BaseModel):
@@ -93,6 +95,10 @@ class CampaignGenerateResponse(BaseModel):
     status: CampaignStatus
     bidding_strategy: BiddingStrategy
     daily_budget: float | None
+    match_types: list[str] | None = None
+    negative_keywords: list[str] | None = None
+    bid_value: float | None = None
+    location_targeting: str | None = None
     created_at: datetime
     updated_at: datetime
     ad_groups: list[AdGroupResponse] = []

@@ -7,6 +7,7 @@ import type {
 } from "@/types/campaign";
 
 const CAMPAIGNS_KEY = ["campaigns"] as const;
+const campaignDetailKey = (id: string) => ["campaigns", id] as const;
 
 async function fetchCampaigns(): Promise<CampaignListResponse> {
   const res = await fetch("/api/campaigns");
@@ -55,6 +56,61 @@ export function useGenerateCampaign() {
     mutationFn: generateCampaign,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CAMPAIGNS_KEY });
+    },
+  });
+}
+
+async function fetchCampaignDetail(id: string): Promise<GenerateResponse> {
+  const res = await fetch(`/api/campaigns/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch campaign detail");
+  return res.json();
+}
+
+export function useCampaignDetail(id: string) {
+  return useQuery({
+    queryKey: campaignDetailKey(id),
+    queryFn: () => fetchCampaignDetail(id),
+  });
+}
+
+async function approveCampaign(campaignId: string): Promise<Campaign> {
+  const res = await fetch(`/api/campaigns/${campaignId}/approve`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to approve campaign");
+  return res.json();
+}
+
+export function useApproveCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: approveCampaign,
+    onSuccess: (_data, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: CAMPAIGNS_KEY });
+      queryClient.invalidateQueries({
+        queryKey: campaignDetailKey(campaignId),
+      });
+    },
+  });
+}
+
+async function rejectCampaign(campaignId: string): Promise<Campaign> {
+  const res = await fetch(`/api/campaigns/${campaignId}/reject`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to reject campaign");
+  return res.json();
+}
+
+export function useRejectCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: rejectCampaign,
+    onSuccess: (_data, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: CAMPAIGNS_KEY });
+      queryClient.invalidateQueries({
+        queryKey: campaignDetailKey(campaignId),
+      });
     },
   });
 }

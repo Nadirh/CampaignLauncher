@@ -84,6 +84,52 @@ class TestBuildUserMessage:
         msg = _build_user_message(SAMPLE_PAGE)
         assert "ad_groups" in msg
 
+    def test_includes_trigger_in_schema(self) -> None:
+        msg = _build_user_message(SAMPLE_PAGE)
+        assert '"trigger"' in msg
+
+    def test_includes_behavioral_toolbox_triggers(self) -> None:
+        msg = _build_user_message(SAMPLE_PAGE)
+        assert "simplicity and efficiency" in msg
+        assert "social proof" in msg
+        assert "urgency and scarcity" in msg
+        assert "anticipation and exceptional benefit" in msg
+        assert "reason why and loss aversion" in msg
+        assert "curiosity and information gaps" in msg
+        assert "direct interaction" in msg
+
+    def test_default_match_types(self) -> None:
+        msg = _build_user_message(SAMPLE_PAGE)
+        assert "Use phrase and exact match" in msg
+
+    def test_custom_match_types(self) -> None:
+        msg = _build_user_message(SAMPLE_PAGE, match_types=["broad"])
+        assert "Use broad match" in msg
+
+    def test_multiple_custom_match_types(self) -> None:
+        msg = _build_user_message(SAMPLE_PAGE, match_types=["phrase", "exact", "broad"])
+        assert "Use phrase and exact and broad match" in msg
+
+    def test_campaign_settings_section(self) -> None:
+        msg = _build_user_message(
+            SAMPLE_PAGE,
+            bidding_strategy="target_cpa",
+            bid_value=3.50,
+            daily_budget=100.0,
+            location_targeting="US, UK",
+            negative_keywords=["free", "cheap"],
+        )
+        assert "Campaign Settings:" in msg
+        assert "Bidding Strategy: target_cpa" in msg
+        assert "Bid Value: $3.5" in msg
+        assert "Daily Budget: $100.0" in msg
+        assert "Location Targeting: US, UK" in msg
+        assert "Negative Keywords: free, cheap" in msg
+
+    def test_no_settings_section_when_empty(self) -> None:
+        msg = _build_user_message(SAMPLE_PAGE)
+        assert "Campaign Settings:" not in msg
+
 
 class TestLoadSystemPrompt:
     def test_loads_file(self) -> None:

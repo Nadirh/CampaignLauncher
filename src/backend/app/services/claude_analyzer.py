@@ -39,7 +39,16 @@ def _load_system_prompt() -> str:
         raise ClaudeAnalyzerError(f"System prompt not found at {path}")
 
 
-def _build_user_message(content: PageContent) -> str:
+def _build_user_message(
+    content: PageContent,
+    *,
+    match_types: list[str] | None = None,
+    negative_keywords: list[str] | None = None,
+    bidding_strategy: str | None = None,
+    bid_value: float | None = None,
+    daily_budget: float | None = None,
+    location_targeting: str | None = None,
+) -> str:
     parts = [
         f"Landing Page URL: {content.url}",
         f"Title: {content.title}",
@@ -54,9 +63,32 @@ def _build_user_message(content: PageContent) -> str:
         parts.append(f"Features: {', '.join(content.features)}")
     parts.append(f"Page Text (truncated): {content.raw_text[:5000]}")
 
+    # Campaign settings section
+    settings_lines: list[str] = []
+    if bidding_strategy:
+        settings_lines.append(f"Bidding Strategy: {bidding_strategy}")
+    if bid_value is not None:
+        settings_lines.append(f"Bid Value: ${bid_value}")
+    if daily_budget is not None:
+        settings_lines.append(f"Daily Budget: ${daily_budget}")
+    if location_targeting:
+        settings_lines.append(f"Location Targeting: {location_targeting}")
+    if negative_keywords:
+        settings_lines.append(f"Negative Keywords: {', '.join(negative_keywords)}")
+    if settings_lines:
+        parts.append("")
+        parts.append("Campaign Settings:")
+        parts.extend(settings_lines)
+
+    # Determine match type instruction
+    if match_types and len(match_types) > 0:
+        match_label = " and ".join(match_types)
+    else:
+        match_label = "phrase and exact"
+
     parts.append("")
     parts.append("Based on this landing page content, generate a campaign structure.")
-    parts.append("Use phrase match and exact match for each keyword.")
+    parts.append(f"Use {match_label} match for each keyword.")
     parts.append("Return your response as a JSON object with this exact schema:")
     parts.append("""
 {
@@ -68,11 +100,11 @@ def _build_user_message(content: PageContent) -> str:
         {"text": "keyword phrase", "match_type": "exact"}
       ],
       "headlines": [
-        {"text": "Headline text (30 chars max)", "position": 1},
-        {"text": "Another headline", "position": 2}
+        {"text": "Headline text (30 chars max)", "position": 1, "trigger": "simplicity and efficiency"},
+        {"text": "Another headline", "position": 2, "trigger": "social proof"}
       ],
       "descriptions": [
-        {"text": "Description text (90 chars max)"}
+        {"text": "Description text (90 chars max)", "trigger": "reason why and loss aversion"}
       ]
     }
   ]
@@ -82,6 +114,10 @@ def _build_user_message(content: PageContent) -> str:
     parts.append("- 5-10 keywords (each in both phrase and exact match)")
     parts.append("- 15 headlines (30 characters max each)")
     parts.append("- 4 descriptions (90 characters max each)")
+    parts.append("Each headline and description must include a behavioral trigger label from the Behavioral Toolbox:")
+    parts.append("  simplicity and efficiency, social proof, urgency and scarcity,")
+    parts.append("  anticipation and exceptional benefit, reason why and loss aversion,")
+    parts.append("  curiosity and information gaps, direct interaction")
     parts.append("Return ONLY the JSON object, no other text.")
 
     return "\n".join(parts)
@@ -95,13 +131,30 @@ def _extract_json(text: str) -> str:
     return text.strip()
 
 
-async def analyze_page(content: PageContent) -> CampaignStructure:
+async def analyze_page(
+    content: PageContent,
+    *,
+    match_types: list[str] | None = None,
+    negative_keywords: list[str] | None = None,
+    bidding_strategy: str | None = None,
+    bid_value: float | None = None,
+    daily_budget: float | None = None,
+    location_targeting: str | None = None,
+) -> CampaignStructure:
     """Send page content to Claude and parse the response into a CampaignStructure."""
     if not settings.ANTHROPIC_API_KEY:
         raise ClaudeAnalyzerError("ANTHROPIC_API_KEY is not configured")
 
     system_prompt = _load_system_prompt()
-    user_message = _build_user_message(content)
+    user_message = _build_user_message(
+        content,
+        match_types=match_types,
+        negative_keywords=negative_keywords,
+        bidding_strategy=bidding_strategy,
+        bid_value=bid_value,
+        daily_budget=daily_budget,
+        location_targeting=location_targeting,
+    )
 
     client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 

@@ -2,6 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+vi.mock("next/link", () => ({
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
 import CampaignList from "@/components/campaign-list";
 
 function createWrapper() {
@@ -53,8 +59,12 @@ describe("CampaignList", () => {
               name: "Test Campaign",
               status: "draft",
               landing_page_url: "https://example.com",
-              bidding_strategy: "manual_cpc",
+              bidding_strategy: "target_cpa",
               daily_budget: null,
+              match_types: null,
+              negative_keywords: null,
+              bid_value: null,
+              location_targeting: null,
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-01-01T00:00:00Z",
             },
@@ -81,8 +91,12 @@ describe("CampaignList", () => {
               name: "Draft Campaign",
               status: "draft",
               landing_page_url: "https://example.com",
-              bidding_strategy: "manual_cpc",
+              bidding_strategy: "target_cpa",
               daily_budget: null,
+              match_types: null,
+              negative_keywords: null,
+              bid_value: null,
+              location_targeting: null,
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-01-01T00:00:00Z",
             },
@@ -98,7 +112,7 @@ describe("CampaignList", () => {
     });
   });
 
-  it("hides Generate button for non-draft campaigns", async () => {
+  it("shows Review link instead of Generate for review-status campaigns", async () => {
     vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -108,8 +122,12 @@ describe("CampaignList", () => {
               name: "Review Campaign",
               status: "review",
               landing_page_url: "https://example.com",
-              bidding_strategy: "manual_cpc",
+              bidding_strategy: "target_cpa",
               daily_budget: null,
+              match_types: null,
+              negative_keywords: null,
+              bid_value: null,
+              location_targeting: null,
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-01-01T00:00:00Z",
             },
@@ -124,6 +142,41 @@ describe("CampaignList", () => {
       expect(screen.getByText("Review Campaign")).toBeInTheDocument();
     });
     expect(screen.queryByText("Generate")).not.toBeInTheDocument();
+    const reviewLink = screen.getByText("Review");
+    expect(reviewLink.closest("a")).toHaveAttribute("href", "/campaigns/abc-456");
+  });
+
+  it("renders campaign name as a link to detail page", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          campaigns: [
+            {
+              id: "abc-123",
+              name: "Linked Campaign",
+              status: "review",
+              landing_page_url: "https://example.com",
+              bidding_strategy: "target_cpa",
+              daily_budget: null,
+              match_types: null,
+              negative_keywords: null,
+              bid_value: null,
+              location_targeting: null,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+          total: 1,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    render(<CampaignList />, { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Linked Campaign")).toBeInTheDocument();
+    });
+    const link = screen.getByText("Linked Campaign").closest("a");
+    expect(link).toHaveAttribute("href", "/campaigns/abc-123");
   });
 
   it("opens and closes the create campaign modal", async () => {

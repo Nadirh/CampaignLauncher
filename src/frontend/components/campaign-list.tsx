@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useCampaigns, useGenerateCampaign } from "@/hooks/use-campaigns";
 import CreateCampaignModal from "@/components/create-campaign-modal";
 
@@ -49,7 +50,14 @@ export default function CampaignList() {
           <tbody>
             {data.campaigns.map((campaign) => (
               <tr key={campaign.id} className="border-b">
-                <td className="py-3 font-medium">{campaign.name}</td>
+                <td className="py-3 font-medium">
+                  <Link
+                    href={`/campaigns/${campaign.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {campaign.name}
+                  </Link>
+                </td>
                 <td className="py-3">
                   <span className="rounded-full bg-gray-100 px-2 py-1 text-xs capitalize">
                     {campaign.status}
@@ -72,6 +80,14 @@ export default function CampaignList() {
                         ? "Generating..."
                         : "Generate"}
                     </button>
+                  )}
+                  {campaign.status === "review" && (
+                    <Link
+                      href={`/campaigns/${campaign.id}`}
+                      className="rounded-md bg-yellow-500 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-600"
+                    >
+                      Review
+                    </Link>
                   )}
                 </td>
               </tr>

@@ -2,7 +2,7 @@ import enum
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, Numeric, String
+from sqlalchemy import JSON, Enum, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -38,11 +38,23 @@ class Campaign(TimestampMixin, Base):
     )
     bidding_strategy: Mapped[BiddingStrategy] = mapped_column(
         Enum(BiddingStrategy, native_enum=False),
-        default=BiddingStrategy.MANUAL_CPC,
+        default=BiddingStrategy.TARGET_CPA,
     )
     daily_budget: Mapped[float | None] = mapped_column(
         Numeric(10, 2),
         nullable=True,
+    )
+    match_types: Mapped[list | None] = mapped_column(
+        JSON, nullable=True,
+    )
+    negative_keywords: Mapped[list | None] = mapped_column(
+        JSON, nullable=True,
+    )
+    bid_value: Mapped[float | None] = mapped_column(
+        Numeric(10, 2), nullable=True,
+    )
+    location_targeting: Mapped[str | None] = mapped_column(
+        String(500), nullable=True,
     )
 
     ad_groups: Mapped[list["AdGroup"]] = relationship(
