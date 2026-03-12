@@ -1,6 +1,5 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 
 from app.services.page_fetcher import (
@@ -9,6 +8,12 @@ from app.services.page_fetcher import (
     fetch_page,
     validate_url,
 )
+
+
+@pytest.fixture(autouse=True)
+def setup_db():
+    """Override the async DB fixture -- these tests don't need a database."""
+    yield
 
 
 SAMPLE_HTML = """
@@ -116,52 +121,61 @@ class TestParseContent:
         assert content.headings == []
 
 
+def _mock_playwright(html: str, status: int = 200):
+    """Create a mock Playwright context that returns the given HTML."""
+    mock_response = MagicMock()
+    mock_response.status = status
+
+    mock_page = AsyncMock()
+    mock_page.goto = AsyncMock(return_value=mock_response)
+    mock_page.content = AsyncMock(return_value=html)
+
+    mock_browser = AsyncMock()
+    mock_browser.new_page = AsyncMock(return_value=mock_page)
+    mock_browser.close = AsyncMock()
+
+    mock_chromium = AsyncMock()
+    mock_chromium.launch = AsyncMock(return_value=mock_browser)
+
+    mock_pw = AsyncMock()
+    mock_pw.chromium = mock_chromium
+    mock_pw.__aenter__ = AsyncMock(return_value=mock_pw)
+    mock_pw.__aexit__ = AsyncMock(return_value=False)
+
+    return mock_pw
+
+
+@pytest.mark.asyncio
 class TestFetchPage:
     async def test_fetch_success(self) -> None:
-        mock_response = httpx.Response(200, text=SAMPLE_HTML, request=httpx.Request("GET", "https://example.com"))
+        mock_pw = _mock_playwright(SAMPLE_HTML)
 
         with (
             patch("app.services.page_fetcher.validate_url", return_value="https://example.com"),
-            patch("app.services.page_fetcher.httpx.AsyncClient") as mock_client_cls,
+            patch("app.services.page_fetcher.async_playwright", return_value=mock_pw),
         ):
-            mock_client = AsyncMock()
-            mock_client.get = AsyncMock(return_value=mock_response)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock(return_value=False)
-            mock_client_cls.return_value = mock_client
-
             content = await fetch_page("https://example.com")
             assert content.title == "Best Project Management Tool"
 
     async def test_fetch_http_error(self) -> None:
-        mock_response = httpx.Response(
-            404,
-            request=httpx.Request("GET", "https://example.com"),
-        )
+        mock_pw = _mock_playwright("", status=404)
 
         with (
             patch("app.services.page_fetcher.validate_url", return_value="https://example.com"),
-            patch("app.services.page_fetcher.httpx.AsyncClient") as mock_client_cls,
+            patch("app.services.page_fetcher.async_playwright", return_value=mock_pw),
         ):
-            mock_client = AsyncMock()
-            mock_client.get = AsyncMock(return_value=mock_response)
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock(return_value=False)
-            mock_client_cls.return_value = mock_client
-
             with pytest.raises(PageFetchError, match="HTTP 404"):
                 await fetch_page("https://example.com")
 
-    async def test_fetch_request_error(self) -> None:
+    async def test_fetch_playwright_error(self) -> None:
+        from playwright.async_api import Error as PlaywrightError
+
+        mock_pw = _mock_playwright("")
+        mock_pw.chromium.launch = AsyncMock(side_effect=PlaywrightError("Browser crashed"))
+
         with (
             patch("app.services.page_fetcher.validate_url", return_value="https://example.com"),
-            patch("app.services.page_fetcher.httpx.AsyncClient") as mock_client_cls,
+            patch("app.services.page_fetcher.async_playwright", return_value=mock_pw),
         ):
-            mock_client = AsyncMock()
-            mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock(return_value=False)
-            mock_client_cls.return_value = mock_client
-
-            with pytest.raises(PageFetchError, match="Request failed"):
+            with pytest.raises(PageFetchError, match="Browser fetch failed"):
                 await fetch_page("https://example.com")

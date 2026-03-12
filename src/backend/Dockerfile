@@ -10,13 +10,19 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
+# Install Playwright Chromium and its system dependencies
+RUN uv run playwright install --with-deps chromium
+
 COPY app/ app/
 COPY alembic.ini alembic.ini
 COPY alembic/ alembic/
 
+# Create non-root user and copy Playwright browser cache to its home
 RUN groupadd --gid 1001 appuser && \
     useradd --uid 1001 --gid 1001 --create-home appuser && \
-    chown -R appuser:appuser /app
+    mkdir -p /home/appuser/.cache && \
+    cp -r /root/.cache/ms-playwright /home/appuser/.cache/ms-playwright && \
+    chown -R appuser:appuser /app /home/appuser/.cache
 
 USER appuser
 

@@ -4,14 +4,14 @@ import socket
 import time
 from urllib.parse import urlparse
 
-import httpx
 from bs4 import BeautifulSoup
+from playwright.async_api import async_playwright, Error as PlaywrightError
 
 from app.schemas.pipeline import PageContent
 
 logger = logging.getLogger(__name__)
 
-FETCH_TIMEOUT = 15.0
+FETCH_TIMEOUT = 30000  # milliseconds for Playwright
 MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB
 
 
@@ -102,32 +102,45 @@ def _parse_content(html: str, url: str) -> PageContent:
     )
 
 
+async def _fetch_with_playwright(url: str) -> str:
+    """Fetch page HTML using Playwright headless Chromium (renders JavaScript)."""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        try:
+            page = await browser.new_page(
+                user_agent="CampaignLauncher/1.0",
+            )
+            response = await page.goto(url, wait_until="networkidle", timeout=FETCH_TIMEOUT)
+            if response and response.status >= 400:
+                raise PageFetchError(f"HTTP {response.status} fetching {url}")
+            html = await page.content()
+            return html
+        finally:
+            await browser.close()
+
+
 async def fetch_page(url: str) -> PageContent:
-    """Fetch a URL and return structured page content."""
+    """Fetch a URL with headless browser and return structured page content."""
     validated_url = validate_url(url)
 
     start = time.monotonic()
-    logger.info("Fetching page", extra={"url": validated_url})
+    logger.info("Fetching page with Playwright", extra={"url": validated_url})
 
     try:
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=FETCH_TIMEOUT,
-            headers={"User-Agent": "CampaignLauncher/1.0"},
-        ) as client:
-            response = await client.get(validated_url)
-            response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
+        html = await _fetch_with_playwright(validated_url)
+    except PageFetchError:
+        raise
+    except PlaywrightError as exc:
         latency = time.monotonic() - start
         logger.error(
-            "Page fetch HTTP error",
-            extra={"url": validated_url, "status": exc.response.status_code, "latency_ms": int(latency * 1000)},
+            "Playwright fetch error",
+            extra={"url": validated_url, "error": str(exc), "latency_ms": int(latency * 1000)},
         )
-        raise PageFetchError(f"HTTP {exc.response.status_code} fetching {validated_url}")
-    except httpx.RequestError as exc:
+        raise PageFetchError(f"Browser fetch failed: {exc}")
+    except Exception as exc:
         latency = time.monotonic() - start
         logger.error(
-            "Page fetch request error",
+            "Unexpected fetch error",
             extra={"url": validated_url, "error": str(exc), "latency_ms": int(latency * 1000)},
         )
         raise PageFetchError(f"Request failed: {exc}")
@@ -135,8 +148,8 @@ async def fetch_page(url: str) -> PageContent:
     latency = time.monotonic() - start
     logger.info(
         "Page fetched",
-        extra={"url": validated_url, "status": response.status_code, "latency_ms": int(latency * 1000)},
+        extra={"url": validated_url, "latency_ms": int(latency * 1000)},
     )
 
-    content = _parse_content(response.text, validated_url)
+    content = _parse_content(html, validated_url)
     return content
