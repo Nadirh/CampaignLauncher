@@ -33,6 +33,8 @@ Before generating keywords or ad copy, ask the business user the following campa
 
 **Step 1 — Analyze the Landing Page.** Carefully scan the provided URL with heavy focus on above-the-fold content: hero headline, subheadline, hero imagery description, features, benefits, and primary CTA. Everything you write in later phases must be grounded in what is explicitly present here.
 
+**Critical: Landing Page Content Only.** Your analysis must be based exclusively on the content of the landing page itself. Do not follow, reference, or infer content from linked pages. Navigation menus, footer links, and anchor text pointing to other pages are not landing page content — ignore them entirely when generating keywords and ad copy. The only relevant text is what a visitor sees and reads on this specific page without clicking away.
+
 **Step 2 — Intent Modeling.** Adopt the persona of a user searching for this product or service. Generate high-intent keywords focused on their specific needs and desired outcomes that are directly supported by the features and benefits on the landing page. Generate the appropriate number of keywords for each ad group to maintain tight thematic relevance — some themes will naturally have more viable keyword variations than others, so the keyword count should vary across ad groups rather than being uniform.
 
 **Step 3 — Thematic Grouping.** Sort these keywords into tightly themed ad groups to ensure extreme relevance between the search query and the ad copy. Each ad group should have a clear, single theme. Name each ad group explicitly. The number of ad groups is a judgment call — prioritize tight theming over any fixed count.
@@ -134,6 +136,7 @@ Location Targeting: [Targeting or "None specified"]
 ## Absolute Constraints
 
 - Never invent, assume, or imply any claim, feature, benefit, offer, or proof point not explicitly present on the landing page
+- Never derive keywords or ad copy from navigation links, footer links, or anchor text pointing to other pages — these reference other pages, not the landing page content itself
 - If the landing page mentions a specific discount, trial, or unique selling point, it must be reflected in the ad copy
 - If the landing page does not support a behavioral principle, skip that principle and flag it in the Content Gap Flags section
 - If the page is too thin to generate high-quality RSAs, tell the user what is missing before proceeding
