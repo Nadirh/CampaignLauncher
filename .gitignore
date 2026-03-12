@@ -9,8 +9,10 @@ logs/
 .env.local
 
 # Node
-node_modules/
+node_modules
 .next/
+next-env.d.ts
+*.tsbuildinfo
 
 # Python
 __pycache__/
